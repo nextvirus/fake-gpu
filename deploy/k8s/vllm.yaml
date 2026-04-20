@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  generation: 6
+  labels:
+    model.aibrix.ai/name: deepseek-r1-distill-llama-8b
+    model.aibrix.ai/port: "8000"
+  name: deepseek-r1-distill-llama-8b
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      model.aibrix.ai/name: deepseek-r1-distill-llama-8b
+      model.aibrix.ai/port: "8000"
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        model.aibrix.ai/name: deepseek-r1-distill-llama-8b
+        model.aibrix.ai/port: "8000"
+    spec:
+      initContainers:
+      - name: build-fake-cuda-shim
+        image: gcc:13
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          gcc -shared -fPIC -O2 -o /shim/libcuda.so.1 /src/libcuda_shim.c
+        volumeMounts:
+        - name: fake-cuda-shim-src
+          mountPath: /src
+        - name: fake-cuda-shim-lib
+          mountPath: /shim
+      containers:
+      - command:
+        - python3
+        - -m
+        - vllm.entrypoints.openai.api_server
+        - --host
+        - 0.0.0.0
+        - --port
+        - "8000"
+        - --uvicorn-log-level
+        - warning
+        - --model
+        - DeepSeek-R1-Distill-Llama-8B
+        - --served-model-name
+        - deepseek-r1-distill-llama-8b
+        - --max-model-len
+        - "12288"
+        - --device
+        - cpu
+        image: vllm/vllm-openai:v0.11.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: VLLM_LOGGING_LEVEL
+          value: DEBUG
+        - name: LD_PRELOAD
+          value: /opt/fake-cuda/libcuda.so.1
+        - name: LD_LIBRARY_PATH
+          value: /opt/fake-cuda
+        - name: FAKE_GPU_COUNT
+          value: "1"
+        - name: FAKE_GPU_MODEL
+          value: "Fake GPU RTX 4090"
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: vllm-openai
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        volumeMounts:
+        - name: fake-cuda-shim-lib
+          mountPath: /opt/fake-cuda
+          readOnly: true
+        readinessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        
+        startupProbe:
+          failureThreshold: 60
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+          requests:
+            nvidia.com/gpu: "1"
+      volumes:
+      - name: fake-cuda-shim-src
+        configMap:
+          name: fake-cuda-shim
+      - name: fake-cuda-shim-lib
+        emptyDir: {}
+      dnsPolicy: ClusterFirst

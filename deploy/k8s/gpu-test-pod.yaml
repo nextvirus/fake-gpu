@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fake-gpu-test
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test
+      image: busybox:1.36
+      command:
+        - /bin/sh
+        - -c
+        - |
+          echo "FAKE_GPU=$FAKE_GPU"
+          echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
+          sleep 3600
+      resources:
+        limits:
+          nvidia.com/gpu: 1

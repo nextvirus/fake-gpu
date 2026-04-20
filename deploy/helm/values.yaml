@@ -1,0 +1,19 @@
+image:
+  repository: fake-gpu-plugin
+  tag: latest
+  pullPolicy: IfNotPresent
+
+config:
+  resourceNames:
+    - nvidia.com/gpu
+    - fake.com/gpu
+  gpuCount: 8
+  gpuMemoryMiB: 8192
+  gpuModel: "Fake GPU RTX 4090"
+  cudaVersion: "12.4"
+  sharingFactor: 1
+  requireNodeLabel: false
+
+metrics:
+  enabled: true
+  port: 9095
