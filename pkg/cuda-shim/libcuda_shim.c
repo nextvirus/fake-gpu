@@ -122,3 +122,39 @@ CUresult cuModuleGetFunction(CUfunction *hfunc, CUmodule hmod, const char *name)
   *hfunc = (void *)0x1;
   return CUDA_SUCCESS;
 }
+
+CUresult cuPointerGetAttribute(void *data, int attribute, CUdeviceptr ptr) {
+  (void)attribute;
+  (void)ptr;
+  if (!data) return CUDA_ERROR_INVALID_VALUE;
+  *(int *)data = 0;
+  return CUDA_SUCCESS;
+}
+
+CUresult cuDeviceGetAttribute(int *pi, int attrib, CUdevice dev) {
+  (void)attrib;
+  (void)dev;
+  if (!pi) return CUDA_ERROR_INVALID_VALUE;
+  *pi = 1;
+  return CUDA_SUCCESS;
+}
+
+int cuTensorMapEncodeTiled(void *tensorMap, int tensorDataType, unsigned int tensorRank,
+                           void *globalAddress, const unsigned long long *globalDim,
+                           const unsigned long long *globalStrides,
+                           const unsigned int *boxDim, const unsigned int *elementStrides,
+                           int interleave, int swizzle, int l2Promotion, int oobFill) {
+  (void)tensorMap;
+  (void)tensorDataType;
+  (void)tensorRank;
+  (void)globalAddress;
+  (void)globalDim;
+  (void)globalStrides;
+  (void)boxDim;
+  (void)elementStrides;
+  (void)interleave;
+  (void)swizzle;
+  (void)l2Promotion;
+  (void)oobFill;
+  return CUDA_SUCCESS;
+}

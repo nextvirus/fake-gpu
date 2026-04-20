@@ -26,21 +26,6 @@ spec:
         model.aibrix.ai/name: deepseek-r1-distill-llama-8b
         model.aibrix.ai/port: "8000"
     spec:
-      initContainers:
-      - name: build-fake-gpu-shims
-        image: gcc:13
-        command:
-        - /bin/sh
-        - -c
-        - |
-          set -eu
-          gcc -shared -fPIC -O2 -Wl,-soname,libcuda.so.1 -o /shim/libcuda.so.1 /src/libcuda_shim.c
-          gcc -shared -fPIC -O2 -Wl,-soname,libnvidia-ml.so.1 -o /shim/libnvidia-ml.so.1 /src/libnvidia_ml_shim.c
-        volumeMounts:
-        - name: fake-cuda-shim-src
-          mountPath: /src
-        - name: fake-cuda-shim-lib
-          mountPath: /shim
       containers:
       - command:
         - python3
@@ -57,49 +42,36 @@ spec:
         - --served-model-name
         - qwen2.5-0.5b-instruct
         - --max-model-len
-        - "12288"
-        image: vllm/vllm-openai:v0.11.0
+        - "4096"
+        image: vllm/vllm-openai-cpu:v0.19.1
         imagePullPolicy: IfNotPresent
         env:
         - name: VLLM_LOGGING_LEVEL
-          value: DEBUG
-        - name: LD_PRELOAD
-          value: /opt/fake-cuda/libcuda.so.1:/opt/fake-cuda/libnvidia-ml.so.1
-        - name: LD_LIBRARY_PATH
-          value: /opt/fake-cuda
-        - name: FAKE_GPU_COUNT
-          value: "1"
-        - name: FAKE_GPU_MODEL
-          value: "Fake GPU RTX 4090"
+          value: INFO
         livenessProbe:
           failureThreshold: 3
           httpGet:
             path: /health
             port: 8000
             scheme: HTTP
-          periodSeconds: 5
+          periodSeconds: 10
           successThreshold: 1
-          timeoutSeconds: 1
+          timeoutSeconds: 2
         name: vllm-openai
         ports:
         - containerPort: 8000
           protocol: TCP
-        volumeMounts:
-        - name: fake-cuda-shim-lib
-          mountPath: /opt/fake-cuda
-          readOnly: true
         readinessProbe:
-          failureThreshold: 5
+          failureThreshold: 10
           httpGet:
             path: /health
             port: 8000
             scheme: HTTP
-          periodSeconds: 5
+          periodSeconds: 10
           successThreshold: 1
-          timeoutSeconds: 1
-        
+          timeoutSeconds: 2
         startupProbe:
-          failureThreshold: 60
+          failureThreshold: 180
           httpGet:
             path: /health
             port: 8000
@@ -114,10 +86,4 @@ spec:
             nvidia.com/gpu: "1"
           requests:
             nvidia.com/gpu: "1"
-      volumes:
-      - name: fake-cuda-shim-src
-        configMap:
-          name: fake-cuda-shim
-      - name: fake-cuda-shim-lib
-        emptyDir: {}
       dnsPolicy: ClusterFirst

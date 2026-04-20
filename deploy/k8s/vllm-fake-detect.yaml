@@ -97,7 +97,6 @@ spec:
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 1
-        
         startupProbe:
           failureThreshold: 60
           httpGet:

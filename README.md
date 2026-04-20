@@ -36,6 +36,33 @@ kubectl apply -f deploy/k8s/vllm.yaml
 - 适合：资源调度验证、平台联调、接口联调、自动化测试占位
 - 不适合：性能测试、吞吐/延迟评估、真实 GPU 训练与推理压测
 
+### 双模式部署（推荐）
+
+为了兼顾“演示 GPU 链路”和“服务可实际运行”，建议使用两套清单：
+
+- `deploy/k8s/vllm-fake-detect.yaml`
+  - 目标：演示 `vllm` 能识别到 CUDA 平台
+  - 方式：GPU 镜像 + fake `libcuda.so.1` + fake `libnvidia-ml.so.1`
+  - 结果：通常只能到“平台检测/初始化日志”阶段，服务大概率无法稳定 Ready
+
+- `deploy/k8s/vllm-cpu-run.yaml`
+  - 目标：在无 GPU 节点上稳定启动并对外提供接口
+  - 方式：CPU 镜像运行，同时保留 `nvidia.com/gpu` 请求用于调度链路演示
+  - 结果：功能联调稳定，性能不代表真实 GPU
+
+快速切换命令：
+
+```bash
+# 模式 A：GPU 探测演示（不保证可推理）
+kubectl apply -f deploy/k8s/fake-gpu-plugin.yaml
+kubectl apply -f deploy/k8s/cuda-shim-configmap.yaml
+kubectl apply -f deploy/k8s/vllm-fake-detect.yaml
+
+# 模式 B：CPU 可运行（推荐联调）
+kubectl apply -f deploy/k8s/fake-gpu-plugin.yaml
+kubectl apply -f deploy/k8s/vllm-cpu-run.yaml
+```
+
 ## Metrics
 
 `/metrics` endpoint exposes:
